@@ -15,10 +15,12 @@ class Master(DatagramProtocol):
         #Super nós conectados
         self.superNodes = {}
         #ID do super nó
-        self.superNodeID = 0
+        self.superNodeID = 1
+        print("Mestre ligado: ", self.id)
 
     #Recebe mensagem
     def datagramReceived(self, datagram: bytes, addr: Any):
+        print("mensagem recebida")
         # decodifica a mensagem
         datagram = datagram.decode("utf-8")
         # separa a mensagem em:
@@ -37,26 +39,30 @@ class Master(DatagramProtocol):
                 # avança o id do nó
                 self.superNodeID += 1
                 # retorna uma mensagem para o super nó
-                ret = f"id:{id}"
+                ret = f"0:id:{id}"
                 self.transport.write(ret.encode('utf-8'), addr)
 
             # super nó recebeu seu id
             case "ACK":
                 # super nó é registrado
                 self.superNodes[id]["reg"] = True
+                print(f"super {id} conectado...")
                 # caso todos os super nós se registraram o mestre manda um broadcast
-                if len(self.superNodes) >= 5:
+                if len(self.superNodes) >= 2:
                     aux = True
                     for node in self.superNodes.values():
                         if not node["reg"]:
                             aux = False
                             break
                     if aux:
-                        self.broadCast("finalizado")
+                        print(f"Todos os supers conectados...")
+                        self.broadCast("0:Finalizado:")
 
             # retorna os dados de endereço de todos os super nós
             case "Roteamento":
-                super_nodes = "|".join(str(x["addr"]) for x in self.superNodes.values())
+                print(f"Mandando informação de roteamento para o super {id}...")
+                super_nodes = "|".join([str(f"{key};{value['addr']}") for key, value in self.superNodes.items()])
+                ret = f"0:SuperNode:{super_nodes}"
                 self.transport.write(ret.encode('utf-8'), addr)
 
 
@@ -65,5 +71,6 @@ class Master(DatagramProtocol):
             self.transport.write(msg.encode('utf-8'), node["addr"])
 
 if __name__ == '__main__':
-    port = random.randint(1000, 5000)
-    reactor.listenUDP(port, Master('127.0.0.1', port))
+    #port = random.randint(1000, 5000)
+    reactor.listenUDP(9999, Master('127.0.0.1', 9999))
+    reactor.run()
