@@ -19,19 +19,32 @@ class Master(DatagramProtocol):
 
     #Recebe mensagem
     def datagramReceived(self, datagram: bytes, addr: Any):
+        # decodifica a mensagem
         datagram = datagram.decode("utf-8")
+        # separa a mensagem em:
+        # ID do super nó : comando : argumentos
         splits = datagram.split(":")
         id, command, arg = splits
         id = int(id)
+        # verifica o comando
         match command:
+            # super nó quer se conectar
             case "ready":
+                # escolhe um id para o super nó
                 id = self.superNodeID
+                # guarda as informações do super nó
                 self.superNodes[id] = {"addr": addr, "reg": False}
+                # avança o id do nó
                 self.superNodeID += 1
+                # retorna uma mensagem para o super nó
                 ret = f"id:{id}"
                 self.transport.write(ret.encode('utf-8'), addr)
+
+            # super nó recebeu seu id
             case "ACK":
+                # super nó é registrado
                 self.superNodes[id]["reg"] = True
+                # caso todos os super nós se registraram o mestre manda um broadcast
                 if len(self.superNodes) >= 5:
                     aux = True
                     for node in self.superNodes.values():
@@ -40,6 +53,8 @@ class Master(DatagramProtocol):
                             break
                     if aux:
                         self.broadCast("finalizado")
+
+            # retorna os dados de endereço de todos os super nós
             case "Roteamento":
                 super_nodes = "|".join(str(x["addr"]) for x in self.superNodes.values())
                 self.transport.write(ret.encode('utf-8'), addr)
