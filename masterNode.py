@@ -38,7 +38,7 @@ class Master(DatagramProtocol):
                 self.superNodes[id] = {"addr": addr, "reg": False}
                 # avança o id do nó
                 self.superNodeID += 1
-                # retorna uma mensagem para o super nó
+                # retorna o id para o super nó
                 ret = f"0:id:{id}"
                 self.transport.write(ret.encode('utf-8'), addr)
 
@@ -50,24 +50,28 @@ class Master(DatagramProtocol):
                 # caso todos os super nós se registraram o mestre manda um broadcast
                 if len(self.superNodes) >= 2:
                     aux = True
+                    # verifica se todos os nós estão registrados
                     for node in self.superNodes.values():
                         if not node["reg"]:
                             aux = False
                             break
                     if aux:
+                        # broadcast para todos os super nós
                         print(f"Todos os supers conectados...")
                         self.broadCast("0:Finalizado:")
 
             # retorna os dados de endereço de todos os super nós
             case "Roteamento":
                 print(f"Mandando informação de roteamento para o super {id}...")
+                # Junta todos os super nós para mandar para o super nó
                 super_nodes = "|".join([str(f"{key};{value['addr']}") for key, value in self.superNodes.items()])
                 ret = f"0:SuperNode:{super_nodes}"
                 self.transport.write(ret.encode('utf-8'), addr)
 
-
+    #função para broadcast
     def broadCast(self, msg):
         for node in self.superNodes.values():
+            print(node["addr"])
             self.transport.write(msg.encode('utf-8'), node["addr"])
 
 if __name__ == '__main__':
